@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "leaflet/dist/leaflet.css";
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-sea-950 text-sea-50;
+}
+
+/* El mapa de Leaflet necesita altura explícita. */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: #122636;
+  border-radius: 0.75rem;
+}
