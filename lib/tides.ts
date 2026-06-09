@@ -127,22 +127,3 @@ export function tideAt(
   const rate = (-A * Math.PI * Math.sin(Math.PI * x) * HOUR) / span;
   return { height, rate };
 }
-
-/**
- * Coeficiente de marea estimado (~20..120). El IHM no lo publica, así que lo
- * aproximamos a partir de la amplitud (pleamar-bajamar) del día relativa al
- * rango astronómico típico de la zona. Es una estimación, no el coeficiente
- * oficial del SHOM, pero sirve para comparar "mareas vivas vs muertas".
- */
-export function dayCoefficient(extremes: TideExtreme[]): number | null {
-  const highs = extremes.filter((e) => e.type === "pleamar").map((e) => e.height);
-  const lows = extremes.filter((e) => e.type === "bajamar").map((e) => e.height);
-  if (!highs.length || !lows.length) return null;
-  const range = Math.max(...highs) - Math.min(...lows);
-  // Rango típico del Golfo de Cádiz: ~1,0 m (muertas) a ~3,6 m (vivas grandes).
-  const RANGE_MIN = 1.0;
-  const RANGE_MAX = 3.6;
-  const f = (range - RANGE_MIN) / (RANGE_MAX - RANGE_MIN);
-  const coef = 20 + Math.max(0, Math.min(1, f)) * 100; // 20..120
-  return Math.round(coef);
-}

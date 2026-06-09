@@ -5,11 +5,12 @@ import type {
   HourlyMarine,
   TideExtreme,
 } from "./types";
-import { tideAt, dayCoefficient } from "./tides";
+import { tideAt } from "./tides";
 import { marineAt } from "./marine";
 import {
   sunMoonForDay,
   solunarPeriods,
+  tidalCoefficient,
   type SolunarPeriod,
 } from "./astro";
 import { HOUR, madridDateKey, madridStartOfDay } from "./time";
@@ -156,11 +157,12 @@ export function buildForecast(
     const dayExtremes = extremes.filter(
       (e) => e.time >= dayStart && e.time < dayStart + 24 * HOUR
     );
-    const coef = dayCoefficient(
-      extremes.filter(
-        (e) => e.time >= dayStart - HOUR && e.time < dayStart + 25 * HOUR
-      )
-    );
+    // Coeficiente astronómico, evaluado en la pleamar principal del día
+    // (o a mediodía si no hay datos de marea para ese día).
+    const mainHigh = dayExtremes
+      .filter((e) => e.type === "pleamar")
+      .sort((a, b) => b.height - a.height)[0];
+    const coef = tidalCoefficient(mainHigh ? mainHigh.time : dayStart + 12 * HOUR);
 
     const hours: HourScore[] = [];
     for (let h = 0; h < 24; h++) {

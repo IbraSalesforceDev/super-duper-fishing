@@ -52,9 +52,11 @@ Despliegue en Vercel: importar el repo, sin variables de entorno necesarias.
 
 ## Notas y limitaciones (importante)
 
-- **Coeficiente de marea**: el IHM no lo publica, así que se **estima** a partir
-  de la amplitud del día relativa al rango típico del Golfo de Cádiz
-  (`dayCoefficient` en `lib/tides.ts`). Es orientativo, no el coeficiente oficial.
+- **Coeficiente de marea**: el IHM no lo publica, así que se calcula de forma
+  **astronómica** (escala 20-120) a partir de la configuración Sol-Luna —fase
+  lunar y distancia lunar— en `tidalCoefficient` (`lib/astro.ts`). Es el
+  coeficiente estándar tipo SHOM, prácticamente igual en todo el mundo para una
+  fecha dada, por lo que coincide con el que muestran tides4fishing y similares.
 - **Zona horaria**: las horas del IHM se interpretan como hora oficial peninsular
   (Europe/Madrid). Si en producción se confirma que el API entrega UTC, basta
   ajustar el parseo en `lib/tides.ts` (`parseDateTime`). El resto del cálculo

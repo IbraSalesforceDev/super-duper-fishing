@@ -63,6 +63,36 @@ function lunarTransits(
   return { transit, antiTransit };
 }
 
+/**
+ * Coeficiente de marea estándar (escala ~20..120), calculado de forma
+ * astronómica a partir de la configuración Sol-Luna. Es prácticamente el mismo
+ * en todo el mundo para un instante dado (referencia tipo Brest/SHOM), por lo
+ * que coincide con el que muestran tides4fishing y similares.
+ *
+ * Modelo de marea de equilibrio semidiurna: combina la marea lunar (M2) y la
+ * solar (S2). Su amplitud combinada es
+ *   A = sqrt(Lm² + k² + 2·Lm·k·cos(2·elongación))
+ * donde:
+ *   - Lm = (a/r)³ amplifica por la distancia lunar (perigeo ↑, apogeo ↓).
+ *   - k ≈ 0,38 es la razón de amplitud solar/lunar (calibra muerta media ≈ 45).
+ *   - cos(2·elongación) → +1 en sicigias (luna nueva/llena = vivas),
+ *     −1 en cuadraturas (cuartos = muertas).
+ * Se normaliza con la viva media (Lm=1, cos=+1) = 100.
+ */
+export function tidalCoefficient(at: number): number {
+  const date = new Date(at);
+  const phase = SunCalc.getMoonIllumination(date).phase; // 0=nueva .25=creciente .5=llena .75=menguante
+  const springNeap = Math.cos(phase * 4 * Math.PI); // +1 vivas, −1 muertas
+  const dist = SunCalc.getMoonPosition(date, 0, 0).distance; // km, ~indep. del observador
+  const A_MEAN = 385000.56; // distancia lunar media (km)
+  const Lm = (A_MEAN / dist) ** 3;
+  const k = 0.38; // razón de amplitud solar/lunar
+  const A = Math.sqrt(Lm * Lm + k * k + 2 * Lm * k * springNeap);
+  const meanSpring = 1 + k;
+  const coef = Math.round((100 * A) / meanSpring);
+  return Math.max(20, Math.min(120, coef));
+}
+
 export function sunMoonForDay(
   startOfDay: number,
   lat: number,
