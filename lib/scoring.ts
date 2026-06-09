@@ -118,12 +118,14 @@ function detectWindows(hours: HourScore[]): FishingWindow[] {
   const windows: FishingWindow[] = [];
   let run: HourScore[] = [];
   const flush = () => {
-    if (run.length >= 2) {
+    if (run.length >= 1) {
       const peak = run.reduce((a, b) => (b.score > a.score ? b : a));
       const avg = run.reduce((s, h) => s + h.score, 0) / run.length;
+      // Un pico aislado se muestra como una ventana corta centrada en él.
+      const pad = run.length === 1 ? 0.5 * HOUR : 0;
       windows.push({
-        start: run[0].time,
-        end: run[run.length - 1].time,
+        start: run[0].time - pad,
+        end: run[run.length - 1].time + pad,
         peak: peak.time,
         score: Math.round(avg),
       });
