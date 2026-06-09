@@ -18,6 +18,8 @@ export interface TideExtreme {
   /** Altura en metros. */
   height: number;
   type: "pleamar" | "bajamar";
+  /** Coeficiente de marea (~20..120) asociado a la pleamar. Solo en pleamares. */
+  coefficient?: number;
 }
 
 export interface HourlyMarine {
@@ -47,6 +49,7 @@ export interface HourScore {
     sunrise: boolean; // dentro de la ventana del amanecer
     sunset: boolean; // dentro de la ventana del atardecer
     night: boolean;
+    synergy: boolean; // solunar + amanecer/atardecer coinciden (ventana premium)
   };
 }
 

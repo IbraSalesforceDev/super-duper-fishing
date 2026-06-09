@@ -10,6 +10,7 @@ import type { Station } from "./types";
 // cuanto se confirme su ID consultando el endpoint getlist del API.
 export const STATIONS: Station[] = [
   { id: 32, name: "Ayamonte", province: "Huelva", lat: 37.2104, lon: -7.4087 },
+  { id: 33, name: "Isla Canela", province: "Huelva", lat: 37.1736, lon: -7.3436 },
   { id: 36, name: "Mazagón (Huelva)", province: "Huelva", lat: 37.1283, lon: -6.8276 },
   { id: 40, name: "Rota", province: "Cádiz", lat: 36.6207, lon: -6.3597 },
   { id: 42, name: "Cádiz", province: "Cádiz", lat: 36.5345, lon: -6.2926 },

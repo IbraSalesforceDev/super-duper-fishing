@@ -37,8 +37,11 @@ Cada hora recibe una nota 0–100 = suma ponderada de cuatro factores
 3. **Luz (20%)** — amanecer y atardecer son horas punta; bonus de noche con luna.
 4. **Meteo-marina (15%)** — penaliza temporal y viento fuerte; premia mar moderada.
 
+Además, una **sinergia** potencia la nota cuando un periodo solunar coincide con
+el orto/ocaso solar (la ventana premium de la teoría solunar, marcada con ⭐).
+
 La nota del día es la media de sus mejores horas, y se detectan **ventanas**
-continuas de buena pesca.
+continuas de buena pesca. El **coeficiente** se muestra junto a cada pleamar.
 
 ## Puesta en marcha
 
@@ -61,9 +64,9 @@ Despliegue en Vercel: importar el repo, sin variables de entorno necesarias.
   (Europe/Madrid). Si en producción se confirma que el API entrega UTC, basta
   ajustar el parseo en `lib/tides.ts` (`parseDateTime`). El resto del cálculo
   usa epoch UTC y solo formatea a local en los bordes (`lib/time.ts`).
-- **Estaciones**: en `lib/stations.ts` hay 6 puertos con ID verificado
-  (Ayamonte 32, Mazagón 36, Rota 40, Cádiz 42, Barbate 47, Tarifa 48). Se pueden
-  añadir más consultando el endpoint `getlist` del API del IHM.
+- **Estaciones**: en `lib/stations.ts` hay 7 puertos con ID verificado
+  (Ayamonte 32, Isla Canela 33, Mazagón 36, Rota 40, Cádiz 42, Barbate 47,
+  Tarifa 48). Se pueden añadir más consultando el endpoint `getlist` del API del IHM.
 - La puntuación es **orientativa** y no sustituye al criterio del pescador ni a
   los avisos de Salvamento/AEMET. Comprueba el estado de la mar antes de salir.
 

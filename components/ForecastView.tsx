@@ -45,12 +45,20 @@ function HourBars({ hours }: { hours: HourScore[] }) {
               }}
               title={`${madridTime(h.time)} · ${h.score}/100 · marea ${h.tideHeight} m (${
                 h.tideRate >= 0 ? "subiendo" : "bajando"
-              })`}
+              })${h.flags.synergy ? " · ventana premium (solunar + luz)" : ""}`}
             />
             <div className="mt-1 text-[9px] text-sea-300/70 flex flex-col items-center leading-none">
               {hour % 3 === 0 ? <span>{String(hour).padStart(2, "0")}</span> : <span>&nbsp;</span>}
               <span className="h-2">
-                {h.flags.sunrise ? "🌅" : h.flags.sunset ? "🌇" : h.flags.major ? "🌙" : ""}
+                {h.flags.synergy
+                  ? "⭐"
+                  : h.flags.sunrise
+                  ? "🌅"
+                  : h.flags.sunset
+                  ? "🌇"
+                  : h.flags.major
+                  ? "🌙"
+                  : ""}
               </span>
             </div>
           </div>
@@ -115,6 +123,11 @@ function DayDetail({ day }: { day: DayForecast }) {
             >
               {e.type === "pleamar" ? "⬆ Pleamar" : "⬇ Bajamar"} {madridTime(e.time)} ·{" "}
               {e.height.toFixed(2)} m
+              {e.coefficient != null && (
+                <span className="ml-1 text-sea-300" title="Coeficiente de marea">
+                  · coef. {e.coefficient}
+                </span>
+              )}
             </span>
           ))}
         </div>
@@ -125,6 +138,9 @@ function DayDetail({ day }: { day: DayForecast }) {
           Puntuación por horas
         </h4>
         <HourBars hours={day.hours} />
+        <p className="mt-2 text-[10px] text-sea-400">
+          ⭐ ventana premium (solunar + luz) · 🌅 amanecer · 🌇 atardecer · 🌙 periodo solunar mayor
+        </p>
       </div>
     </div>
   );

@@ -25,6 +25,9 @@ import { HOUR, madridDateKey, madridStartOfDay } from "./time";
 //   - Luz (peso 20): amanecer y atardecer son horas punta; bonus si hay luna de noche.
 //   - Meteo-marina (peso 15): penaliza temporal/viento fuerte; premia mar moderada.
 //
+// Además, una "sinergia" potencia la nota cuando un periodo solunar coincide con
+// el orto/ocaso solar (la ventana premium de la teoría solunar).
+//
 // Los pesos son ajustables; reflejan la práctica habitual del surfcasting.
 
 const WEIGHTS = { tide: 0.4, solunar: 0.25, light: 0.2, weather: 0.15 };
@@ -47,8 +50,8 @@ function proximity(t: number, target: number | null, win: number): number {
 function scoreTide(rate: number, coef: number | null): number {
   // |rate| típico: 0 (parado) .. ~0,8 m/h en vivas. Normalizamos a ~0,7.
   const movement = Math.min(1, Math.abs(rate) / 0.7);
-  // Bonus por marea subiendo (mejor para surfcasting): subida x1, bajada x0,85.
-  const dir = rate >= 0 ? 1 : 0.85;
+  // Bonus por marea subiendo (mejor para surfcasting): subida x1, bajada x0,78.
+  const dir = rate >= 0 ? 1 : 0.78;
   // Modulación por coeficiente: muertas reducen, vivas potencian.
   const coefF = coef == null ? 0.8 : 0.5 + 0.5 * Math.min(1, (coef - 20) / 100);
   return Math.max(0, Math.min(1, movement * dir * coefF));
@@ -74,7 +77,7 @@ function scoreLight(
     sunrise != null && sunset != null && (t < sunrise || t > sunset);
   // Base: punta en orto/ocaso; noche con luna algo de actividad; mediodía bajo.
   let base = Math.max(pr, ps);
-  if (isNight) base = Math.max(base, moonUp ? 0.5 : 0.35);
+  if (isNight) base = Math.max(base, moonUp ? 0.55 : 0.4);
   else base = Math.max(base, 0.25); // día con poca luz aún algo
   return {
     score: base,
@@ -157,8 +160,14 @@ export function buildForecast(
     const dayExtremes = extremes.filter(
       (e) => e.time >= dayStart && e.time < dayStart + 24 * HOUR
     );
-    // Coeficiente astronómico, evaluado en la pleamar principal del día
-    // (o a mediodía si no hay datos de marea para ese día).
+    // Coeficiente astronómico por pleamar (varía algo entre las dos del día).
+    const annotatedExtremes = dayExtremes.map((e) =>
+      e.type === "pleamar"
+        ? { ...e, coefficient: tidalCoefficient(e.time) }
+        : e
+    );
+    // Coeficiente del día: el de la pleamar principal (mayor altura),
+    // o a mediodía si no hay datos de marea para ese día.
     const mainHigh = dayExtremes
       .filter((e) => e.type === "pleamar")
       .sort((a, b) => b.height - a.height)[0];
@@ -179,13 +188,23 @@ export function buildForecast(
       const light = scoreLight(t, sm.sunrise, sm.sunset, moonUp);
       const fWeather = scoreWeather(m);
 
-      const score = Math.round(
-        100 *
-          (WEIGHTS.tide * fTide +
-            WEIGHTS.solunar * fSol +
-            WEIGHTS.light * light.score +
-            WEIGHTS.weather * fWeather)
-      );
+      const isMajor = inAnyPeriod(periods, t, "major");
+      const isMinor = inAnyPeriod(periods, t, "minor");
+      const lightPeak = light.sunriseFlag || light.sunsetFlag;
+
+      let combined =
+        WEIGHTS.tide * fTide +
+        WEIGHTS.solunar * fSol +
+        WEIGHTS.light * light.score +
+        WEIGHTS.weather * fWeather;
+
+      // Sinergia: un periodo solunar que coincide con el orto/ocaso solar es la
+      // ventana premium de la teoría solunar -> se potencia la nota.
+      const synergy = (isMajor && lightPeak) || (isMinor && lightPeak);
+      if (isMajor && lightPeak) combined *= 1.15;
+      else if (isMinor && lightPeak) combined *= 1.08;
+
+      const score = Math.round(100 * Math.min(1, combined));
 
       hours.push({
         time: t,
@@ -194,11 +213,12 @@ export function buildForecast(
         tideRate: Number(rate.toFixed(2)),
         factors: { tide: fTide, solunar: fSol, light: light.score, weather: fWeather },
         flags: {
-          major: inAnyPeriod(periods, t, "major"),
-          minor: inAnyPeriod(periods, t, "minor"),
+          major: isMajor,
+          minor: isMinor,
           sunrise: light.sunriseFlag,
           sunset: light.sunsetFlag,
           night: light.night,
+          synergy,
         },
       });
     }
@@ -216,7 +236,7 @@ export function buildForecast(
       moonPhase: sm.moonPhase,
       sunrise: sm.sunrise,
       sunset: sm.sunset,
-      extremes: dayExtremes,
+      extremes: annotatedExtremes,
       windows,
       hours,
     });
