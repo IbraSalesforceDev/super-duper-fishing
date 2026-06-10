@@ -8,8 +8,27 @@
   color-scheme: dark;
 }
 
+html,
+body {
+  /* Evita el desbordamiento horizontal que en móvil hace que la página se vea
+     "descuadrada" / con zoom al entrar. */
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
   @apply bg-sea-950 text-sea-50;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* En móvil, los controles de formulario con fuente <16px hacen que iOS haga
+   zoom automático al enfocarlos (y no lo deshace). Forzamos 16px. */
+@media (max-width: 640px) {
+  select,
+  input,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* El mapa de Leaflet necesita altura explícita. */

@@ -106,7 +106,7 @@ export default function Home() {
       </header>
 
       <div className="grid lg:grid-cols-[1fr_1.2fr] gap-6 items-start">
-        <section className="space-y-3">
+        <section className="space-y-3 min-w-0">
           <div className="h-[360px] sm:h-[420px] rounded-xl overflow-hidden border border-sea-700/60 shadow-lg shadow-sea-950/50">
             <MapPicker
               stations={STATIONS}
@@ -147,7 +147,7 @@ export default function Home() {
           </p>
         </section>
 
-        <section className="space-y-3 min-h-[300px]">
+        <section className="space-y-3 min-h-[300px] min-w-0">
           {bestDay && (
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
               <span className="text-xs uppercase tracking-wide text-emerald-300">

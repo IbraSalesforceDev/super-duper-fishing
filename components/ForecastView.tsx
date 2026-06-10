@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { DayForecast, ForecastResponse, HourScore } from "@/lib/types";
-import { madridTime, HOUR } from "@/lib/time";
+import { madridTime, HOUR, MINUTE } from "@/lib/time";
 import { tideAt } from "@/lib/tides";
+import { speciesForDay } from "@/lib/species";
 import TideChart from "./TideChart";
 
 const RATING_STYLE: Record<DayForecast["rating"], string> = {
@@ -129,6 +130,120 @@ function HourBars({ hours }: { hours: HourScore[] }) {
   );
 }
 
+function SessionPlan({ day }: { day: DayForecast }) {
+  const w = day.windows[0];
+  const best = [...day.hours].sort((a, b) => b.score - a.score)[0];
+  if (!w && !best) return null;
+
+  // Sin ventana destacada: plan ligero en torno a la mejor hora.
+  if (!w) {
+    return (
+      <div className="rounded-xl border border-sea-700/50 bg-sea-800/30 p-3">
+        <h4 className="text-xs uppercase tracking-wide text-sea-300 mb-1">
+          🎒 Plan de sesión
+        </h4>
+        <p className="text-sm text-sea-200">
+          Día sin ventana destacada. Prueba en torno a las{" "}
+          <strong>{madridTime(best.time)}</strong> (nota {best.score}/100).
+        </p>
+      </div>
+    );
+  }
+
+  const arrival = w.start - 45 * MINUTE;
+  const peakHour = day.hours.find((h) => h.time === w.peak);
+  const tideState = peakHour
+    ? peakHour.tideRate > 0.03
+      ? `subiendo ⬆ ${peakHour.tideHeight} m`
+      : peakHour.tideRate < -0.03
+      ? `bajando ⬇ ${peakHour.tideHeight} m`
+      : `parada ${peakHour.tideHeight} m`
+    : "";
+
+  const steps = [
+    { i: "🚗", t: `Llega sobre las ${madridTime(arrival)}`, s: "monta antes de la ventana" },
+    { i: "🎯", t: `Mejor momento ${madridTime(w.peak)}`, s: `marea ${tideState} · nota ${w.score}/100` },
+    { i: "🎣", t: `Pesca activa ${madridTime(w.start)}–${madridTime(w.end)}`, s: "" },
+    { i: "🏁", t: `Recoge a partir de ${madridTime(w.end)}`, s: "" },
+  ];
+
+  return (
+    <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3">
+      <h4 className="text-xs uppercase tracking-wide text-emerald-300/90 mb-2">
+        🎒 Plan de sesión
+      </h4>
+      <ol className="space-y-1.5">
+        {steps.map((st) => (
+          <li key={st.t} className="flex items-start gap-2 text-sm">
+            <span>{st.i}</span>
+            <span>
+              <span className="font-medium">{st.t}</span>
+              {st.s && <span className="text-sea-300"> · {st.s}</span>}
+            </span>
+          </li>
+        ))}
+      </ol>
+      {day.windows.length > 1 && (
+        <p className="mt-2 text-xs text-sea-400">
+          Otra ventana: {madridTime(day.windows[1].start)}–
+          {madridTime(day.windows[1].end)} ({day.windows[1].score}/100).
+        </p>
+      )}
+    </div>
+  );
+}
+
+function SpeciesPanel({ day }: { day: DayForecast }) {
+  const [sel, setSel] = useState<string | null>(null);
+  const month = Number(day.date.split("-")[1]);
+  const best = [...day.hours].sort((a, b) => b.score - a.score)[0];
+  const picks = speciesForDay({
+    month,
+    coefficient: day.coefficient,
+    nightBest: best?.flags.night ?? false,
+    risingBest: (best?.tideRate ?? 0) > 0,
+  });
+  if (picks.length === 0) return null;
+  const selected = picks.find((p) => p.name === sel) ?? picks[0];
+
+  return (
+    <div>
+      <h4 className="text-xs uppercase tracking-wide text-sea-300 mb-1">
+        🐟 Especies de temporada{" "}
+        <span className="text-sea-500 normal-case">(toca para ver consejo)</span>
+      </h4>
+      <ul className="flex flex-wrap gap-2">
+        {picks.map((s) => {
+          const active = s.name === selected.name;
+          return (
+            <li key={s.name}>
+              <button
+                onClick={() => setSel(s.name)}
+                className={`px-2.5 py-1 rounded-lg text-sm border transition ${
+                  active
+                    ? "bg-sea-700 border-sea-400"
+                    : s.fitsToday
+                    ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-200"
+                    : "bg-sea-800/50 border-sea-700/60"
+                }`}
+              >
+                {s.emoji} {s.name}
+                {s.fitsToday && <span title="Encaja con las condiciones de hoy"> ⭐</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-2 text-xs text-sea-300">
+        <strong>{selected.emoji} {selected.name}.</strong> {selected.note}
+        {selected.fitsToday && (
+          <span className="text-emerald-300"> · ⭐ buen día para ella.</span>
+        )}
+      </p>
+    </div>
+  );
+}
+
 function DayDetail({ day }: { day: DayForecast }) {
   return (
     <div className="rounded-xl border border-sea-700/60 bg-sea-900/60 p-4 space-y-4">
@@ -195,6 +310,8 @@ function DayDetail({ day }: { day: DayForecast }) {
         </div>
       )}
 
+      <SessionPlan day={day} />
+
       <div>
         <h4 className="text-xs uppercase tracking-wide text-sea-300 mb-1">
           Mareas del día
@@ -226,6 +343,8 @@ function DayDetail({ day }: { day: DayForecast }) {
           ⭐ ventana premium (solunar + luz) · 🌅 amanecer · 🌇 atardecer · 🌙 periodo solunar mayor
         </p>
       </div>
+
+      <SpeciesPanel day={day} />
     </div>
   );
 }
@@ -235,7 +354,7 @@ export default function ForecastView({ data }: { data: ForecastResponse }) {
   const day = data.days[selected];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       <div className="flex items-baseline justify-between flex-wrap gap-2">
         <h2 className="text-xl font-semibold">
           {data.station.name}{" "}
