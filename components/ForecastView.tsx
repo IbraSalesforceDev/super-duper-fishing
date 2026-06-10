@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DayForecast, ForecastResponse, HourScore } from "@/lib/types";
-import { madridTime } from "@/lib/time";
+import { madridTime, HOUR } from "@/lib/time";
+import { tideAt } from "@/lib/tides";
+import TideChart from "./TideChart";
 
 const RATING_STYLE: Record<DayForecast["rating"], string> = {
   excelente: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
@@ -27,6 +29,65 @@ function dayLabel(date: string): string {
     month: "short",
     timeZone: "UTC",
   }).format(dt);
+}
+
+/** Panel con el estado de la marea en este momento y la próxima marea. */
+function NowPanel({ data }: { data: ForecastResponse }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const extremes = useMemo(
+    () => data.days.flatMap((d) => d.extremes),
+    [data]
+  );
+  const next = extremes.find((e) => e.time > now);
+  if (!next || extremes.length === 0) return null;
+
+  const { height, rate } = tideAt(extremes, now);
+  const mins = Math.max(0, Math.round((next.time - now) / 60_000));
+  const hh = Math.floor(mins / 60);
+  const mm = mins % 60;
+  const dir =
+    Math.abs(rate) < 0.05 ? "parada" : rate > 0 ? "subiendo" : "bajando";
+  const dirIcon = Math.abs(rate) < 0.05 ? "⏸" : rate > 0 ? "⬆" : "⬇";
+
+  const today = data.days[0];
+  const hourNow = today?.hours.find(
+    (h) => now >= h.time && now < h.time + HOUR
+  );
+
+  return (
+    <div className="rounded-xl border border-sea-600/50 bg-gradient-to-r from-sea-800/80 to-sea-900/60 px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
+      <span className="text-xs uppercase tracking-wide text-sea-300 w-full sm:w-auto">
+        Ahora mismo
+      </span>
+      <span className="text-sm font-semibold">
+        🌊 {height.toFixed(2)} m{" "}
+        <span className={rate > 0 ? "text-emerald-300" : "text-sea-300"}>
+          {dirIcon} {dir}
+        </span>
+      </span>
+      <span className="text-sm">
+        {next.type === "pleamar" ? "⬆ Pleamar" : "⬇ Bajamar"} a las{" "}
+        <strong>{madridTime(next.time)}</strong>{" "}
+        <span className="text-sea-300">
+          (en {hh > 0 ? `${hh} h ` : ""}
+          {mm} min)
+        </span>
+      </span>
+      {hourNow && (
+        <span
+          className="text-sm font-semibold"
+          style={{ color: scoreColor(hourNow.score) }}
+        >
+          ● nota actual {hourNow.score}/100
+        </span>
+      )}
+    </div>
+  );
 }
 
 function HourBars({ hours }: { hours: HourScore[] }) {
@@ -80,14 +141,37 @@ function DayDetail({ day }: { day: DayForecast }) {
           {day.moonPhase.emoji} {day.moonPhase.name}
         </span>
         {day.coefficient != null && (
-          <span className="text-sm text-sea-200" title="Coeficiente de marea estimado">
-            coef. ≈ {day.coefficient}
+          <span className="text-sm text-sea-200" title="Coeficiente de marea">
+            coef. {day.coefficient}
           </span>
         )}
         <span className="text-sm text-sea-300">
           {day.sunrise && `🌅 ${madridTime(day.sunrise)}`}{" "}
           {day.sunset && `· 🌇 ${madridTime(day.sunset)}`}
         </span>
+        {day.marine && (
+          <span className="text-sm text-sea-300">
+            {day.marine.waveMax != null && (
+              <span title="Altura de ola máxima del día">
+                🌊 máx {day.marine.waveMax.toFixed(1)} m{" "}
+              </span>
+            )}
+            {day.marine.windMax != null && (
+              <span title="Viento máximo del día">
+                💨 máx {day.marine.windMax} km/h
+              </span>
+            )}
+          </span>
+        )}
+      </div>
+
+      <div>
+        <h4 className="text-xs uppercase tracking-wide text-sea-300 mb-1">
+          Curva de marea
+        </h4>
+        <div className="rounded-lg bg-sea-950/60 border border-sea-800/80 p-1">
+          <TideChart day={day} />
+        </div>
       </div>
 
       {day.windows.length > 0 && (
@@ -99,7 +183,7 @@ function DayDetail({ day }: { day: DayForecast }) {
             {day.windows.slice(0, 3).map((w) => (
               <li
                 key={w.start}
-                className="px-3 py-1.5 rounded-lg bg-sea-800/70 border border-sea-700 text-sm"
+                className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-sm"
               >
                 <span className="font-medium">
                   {madridTime(w.start)}–{madridTime(w.end)}
@@ -170,6 +254,8 @@ export default function ForecastView({ data }: { data: ForecastResponse }) {
         </p>
       ))}
 
+      <NowPanel data={data} />
+
       <div className="grid grid-flow-col auto-cols-[minmax(7rem,1fr)] gap-2 overflow-x-auto pb-1">
         {data.days.map((d, i) => (
           <button
@@ -177,7 +263,7 @@ export default function ForecastView({ data }: { data: ForecastResponse }) {
             onClick={() => setSelected(i)}
             className={`rounded-xl border p-3 text-left transition ${
               i === selected
-                ? "border-sea-300 bg-sea-800/80"
+                ? "border-sea-300 bg-sea-800/80 shadow-lg shadow-sea-950/50"
                 : "border-sea-700/60 bg-sea-900/50 hover:bg-sea-800/50"
             }`}
           >
@@ -190,7 +276,12 @@ export default function ForecastView({ data }: { data: ForecastResponse }) {
               <span className="text-lg font-bold">{d.score}</span>
               <span className="text-xs text-sea-300">/100</span>
             </div>
-            <div className="text-xs text-sea-300 mt-0.5">{d.moonPhase.emoji} {d.rating}</div>
+            <div className="text-xs text-sea-300 mt-0.5">
+              {d.moonPhase.emoji} {d.rating}
+              {d.coefficient != null && (
+                <span className="text-sea-400"> · c{d.coefficient}</span>
+              )}
+            </div>
           </button>
         ))}
       </div>

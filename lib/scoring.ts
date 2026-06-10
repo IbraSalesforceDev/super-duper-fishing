@@ -230,6 +230,27 @@ export function buildForecast(
     const top = [...hours].sort((a, b) => b.score - a.score).slice(0, 4);
     const dayScore = Math.round(top.reduce((s, h) => s + h.score, 0) / top.length);
 
+    // Resumen meteo-marino del día para mostrar en la UI.
+    const dayMarine = marine.filter(
+      (m) => m.time >= dayStart && m.time < dayStart + 24 * HOUR
+    );
+    const waveVals = dayMarine
+      .map((m) => m.waveHeight)
+      .filter((v): v is number => v != null);
+    const windVals = dayMarine
+      .map((m) => m.windSpeed)
+      .filter((v): v is number => v != null);
+    const marineSummary = dayMarine.length
+      ? {
+          waveMax: waveVals.length
+            ? Number(Math.max(...waveVals).toFixed(1))
+            : null,
+          windMax: windVals.length
+            ? Math.round(Math.max(...windVals))
+            : null,
+        }
+      : null;
+
     result.push({
       date: madridDateKey(dayStart),
       score: dayScore,
@@ -241,6 +262,7 @@ export function buildForecast(
       extremes: annotatedExtremes,
       windows,
       hours,
+      marine: marineSummary,
     });
   }
 

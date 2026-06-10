@@ -73,6 +73,8 @@ export interface DayForecast {
   extremes: TideExtreme[];
   windows: FishingWindow[];
   hours: HourScore[];
+  /** Resumen meteo-marino del día (máximos), o null si no hay datos. */
+  marine: { waveMax: number | null; windMax: number | null } | null;
 }
 
 export interface ForecastResponse {
