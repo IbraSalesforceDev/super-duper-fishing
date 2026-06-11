@@ -38,34 +38,42 @@ export default function Home() {
     window.history.replaceState(null, "", url);
   }, [station]);
 
-  const loadForecast = useCallback(async (s: Station) => {
+  // Carga la previsión de la estación seleccionada. La guarda `active` evita
+  // que una respuesta antigua (de una estación anterior) que llegue tarde
+  // sobrescriba los datos de la estación actual (condición de carrera).
+  useEffect(() => {
+    let active = true;
     setLoading(true);
     setError(null);
-    try {
-      const res = await fetch(`/api/forecast?stationId=${s.id}&days=7`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Error desconocido");
-      setData(json as ForecastResponse);
-    } catch (e: any) {
-      setError(e.message);
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadForecast(station);
-  }, [station, loadForecast]);
+    (async () => {
+      try {
+        const res = await fetch(`/api/forecast?stationId=${station.id}&days=7`);
+        const json = await res.json();
+        if (!active) return;
+        if (!res.ok) throw new Error(json.error ?? "Error desconocido");
+        setData(json as ForecastResponse);
+      } catch (e: any) {
+        if (active) {
+          setError(e.message);
+          setData(null);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [station]);
 
   const handlePick = useCallback((lat: number, lon: number) => {
     setStation(nearestStation(lat, lon));
   }, []);
 
   const bestDay = useMemo(() => {
-    if (!data) return null;
+    if (!data || data.station.id !== station.id) return null;
     return data.days.reduce((a, b) => (b.score > a.score ? b : a));
-  }, [data]);
+  }, [data, station.id]);
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
@@ -165,7 +173,9 @@ export default function Home() {
               {error}
             </p>
           )}
-          {data && !loading && <ForecastView data={data} />}
+          {data && !loading && data.station.id === station.id && (
+            <ForecastView data={data} />
+          )}
         </section>
       </div>
 
