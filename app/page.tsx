@@ -23,7 +23,6 @@ export default function Home() {
   const [data, setData] = useState<ForecastResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [locating, setLocating] = useState(false);
 
   // Estación desde la URL (?st=ID) al cargar: enlaces compartibles.
   useEffect(() => {
@@ -61,25 +60,6 @@ export default function Home() {
 
   const handlePick = useCallback((lat: number, lon: number) => {
     setStation(nearestStation(lat, lon));
-  }, []);
-
-  const locateMe = useCallback(() => {
-    if (!navigator.geolocation) {
-      setError("Tu navegador no permite geolocalización.");
-      return;
-    }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (p) => {
-        setLocating(false);
-        setStation(nearestStation(p.coords.latitude, p.coords.longitude));
-      },
-      () => {
-        setLocating(false);
-        setError("No se pudo obtener tu ubicación.");
-      },
-      { timeout: 8000 }
-    );
   }, []);
 
   const bestDay = useMemo(() => {
@@ -136,14 +116,6 @@ export default function Home() {
                 </optgroup>
               ))}
             </select>
-            <button
-              onClick={locateMe}
-              disabled={locating}
-              className="px-3 py-1.5 rounded-lg text-sm bg-sea-800 border border-sea-600 hover:bg-sea-700 disabled:opacity-50 transition"
-              title="Usar la estación más cercana a tu posición"
-            >
-              {locating ? "Localizando…" : "📍 Mi ubicación"}
-            </button>
           </div>
           <p className="text-xs text-sea-400">
             Pincha en el mapa para usar la estación de marea oficial más
