@@ -1,16 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   MapContainer,
   TileLayer,
   Marker,
   CircleMarker,
   Tooltip,
+  useMap,
   useMapEvents,
 } from "react-leaflet";
 import L from "leaflet";
 import type { Station } from "@/lib/types";
+import { REGIONS } from "@/lib/stations";
 
 // Icono por defecto de Leaflet apuntando a la CDN (evita el bug de iconos rotos
 // con bundlers). Marca la estación seleccionada.
@@ -33,6 +35,18 @@ function ClickHandler({ onPick }: { onPick: (lat: number, lon: number) => void }
   return null;
 }
 
+/** Vuela a la región de la estación seleccionada cuando cambia de zona. */
+function Recenter({ station }: { station: Station | null }) {
+  const map = useMap();
+  const region = station?.region;
+  useEffect(() => {
+    if (!region) return;
+    const { center, zoom } = REGIONS[region];
+    map.flyTo(center, zoom, { duration: 0.8 });
+  }, [region, map]);
+  return null;
+}
+
 export default function MapPicker({
   stations,
   selectedId,
@@ -42,14 +56,17 @@ export default function MapPicker({
   selectedId: number | null;
   onPick: (lat: number, lon: number) => void;
 }) {
-  // Centrado en el golfo de Cádiz, abarcando Huelva y Cádiz costa.
-  const center = useMemo<[number, number]>(() => [36.7, -6.6], []);
   const selected = stations.find((s) => s.id === selectedId) ?? null;
+  // Centro y zoom iniciales según la región de la estación seleccionada.
+  const initial = useMemo(
+    () => REGIONS[selected?.region ?? "Golfo de Cádiz"],
+    [selected?.region]
+  );
 
   return (
     <MapContainer
-      center={center}
-      zoom={8}
+      center={initial.center}
+      zoom={initial.zoom}
       scrollWheelZoom
       className="h-full w-full"
     >
@@ -58,6 +75,7 @@ export default function MapPicker({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <ClickHandler onPick={onPick} />
+      <Recenter station={selected} />
 
       {stations.map((s) => (
         <CircleMarker

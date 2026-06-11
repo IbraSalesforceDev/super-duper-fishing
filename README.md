@@ -64,9 +64,13 @@ Despliegue en Vercel: importar el repo, sin variables de entorno necesarias.
   (Europe/Madrid). Si en producción se confirma que el API entrega UTC, basta
   ajustar el parseo en `lib/tides.ts` (`parseDateTime`). El resto del cálculo
   usa epoch UTC y solo formatea a local en los bordes (`lib/time.ts`).
-- **Estaciones**: en `lib/stations.ts` hay 7 puertos con ID verificado
-  (Ayamonte 32, Isla Canela 33, Mazagón 36, Rota 40, Cádiz 42, Barbate 47,
-  Tarifa 48). Se pueden añadir más consultando el endpoint `getlist` del API del IHM.
+- **Regiones y estaciones**: en `lib/stations.ts` hay dos regiones con IDs y
+  coordenadas oficiales del IHM (`getlist`): **Golfo de Cádiz** (Ayamonte, Isla
+  Canela, Isla Cristina, Punta Umbría, Mazagón, Chipiona, Rota, Cádiz, Sancti
+  Petri, Conil, Barbate, Tarifa) y **Costa da Morte** (Malpica, Camariñas,
+  Fisterra, Portosín). Muxía no tiene mareógrafo propio en el IHM: su estación
+  de referencia es **Camariñas** (misma ría, ~6 km). El mapa se recentra solo en
+  la región de la estación elegida y las especies se adaptan a cada región.
 - La puntuación es **orientativa** y no sustituye al criterio del pescador ni a
   los avisos de Salvamento/AEMET. Comprueba el estado de la mar antes de salir.
 

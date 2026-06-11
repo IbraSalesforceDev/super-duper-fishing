@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { DayForecast, ForecastResponse, HourScore } from "@/lib/types";
+import type { DayForecast, ForecastResponse, HourScore, Region } from "@/lib/types";
 import { madridTime, HOUR, MINUTE } from "@/lib/time";
 import { tideAt } from "@/lib/tides";
 import { speciesForDay } from "@/lib/species";
@@ -193,11 +193,12 @@ function SessionPlan({ day }: { day: DayForecast }) {
   );
 }
 
-function SpeciesPanel({ day }: { day: DayForecast }) {
+function SpeciesPanel({ day, region }: { day: DayForecast; region: Region }) {
   const [sel, setSel] = useState<string | null>(null);
   const month = Number(day.date.split("-")[1]);
   const best = [...day.hours].sort((a, b) => b.score - a.score)[0];
   const picks = speciesForDay({
+    region,
     month,
     coefficient: day.coefficient,
     nightBest: best?.flags.night ?? false,
@@ -244,7 +245,7 @@ function SpeciesPanel({ day }: { day: DayForecast }) {
   );
 }
 
-function DayDetail({ day }: { day: DayForecast }) {
+function DayDetail({ day, region }: { day: DayForecast; region: Region }) {
   return (
     <div className="rounded-xl border border-sea-700/60 bg-sea-900/60 p-4 space-y-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -344,7 +345,7 @@ function DayDetail({ day }: { day: DayForecast }) {
         </p>
       </div>
 
-      <SpeciesPanel day={day} />
+      <SpeciesPanel day={day} region={region} />
     </div>
   );
 }
@@ -405,7 +406,7 @@ export default function ForecastView({ data }: { data: ForecastResponse }) {
         ))}
       </div>
 
-      {day && <DayDetail day={day} />}
+      {day && <DayDetail day={day} region={data.station.region} />}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import ForecastView from "@/components/ForecastView";
-import { STATIONS, nearestStation } from "@/lib/stations";
+import { STATIONS, REGION_ORDER, nearestStation } from "@/lib/stations";
 import type { ForecastResponse, Station } from "@/lib/types";
 
 // Leaflet usa `window`, así que cargamos el mapa solo en cliente.
@@ -96,12 +96,13 @@ export default function Home() {
             Mareas &amp; Pesca
           </span>{" "}
           <span className="text-base font-medium text-sea-300">
-            · Huelva y Cádiz
+            · {station.region}
           </span>
         </h1>
         <p className="text-sm text-sea-300">
-          Mejores días y horas para pescar desde playa, combinando mareas
-          oficiales del IHM, periodos solunares y estado de la mar.
+          Mejores días y horas para pescar desde costa, combinando mareas
+          oficiales del IHM, periodos solunares y estado de la mar. Golfo de
+          Cádiz y Costa da Morte.
         </p>
       </header>
 
@@ -125,10 +126,14 @@ export default function Home() {
               }
               className="bg-sea-900 border border-sea-700 rounded-lg px-3 py-1.5 text-sm"
             >
-              {STATIONS.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.province})
-                </option>
+              {REGION_ORDER.map((region) => (
+                <optgroup key={region} label={region}>
+                  {STATIONS.filter((s) => s.region === region).map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.province})
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
             <button

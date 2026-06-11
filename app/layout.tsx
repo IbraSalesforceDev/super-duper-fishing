@@ -3,9 +3,9 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Mareas & Pesca · Huelva y Cádiz",
+  title: "Mareas & Pesca · Golfo de Cádiz y Costa da Morte",
   description:
-    "Mejores días y horas para pescar desde playa en la costa de Huelva y Cádiz, según mareas oficiales del IHM, datos solunares y meteo-marina.",
+    "Mejores días y horas para pescar desde costa (Golfo de Cádiz y Costa da Morte), según mareas oficiales del IHM, datos solunares y meteo-marina.",
 };
 
 export const viewport: Viewport = {

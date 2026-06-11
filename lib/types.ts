@@ -1,12 +1,13 @@
 // Tipos compartidos entre el backend (rutas /api) y el frontend.
 
-export type Province = "Huelva" | "Cádiz";
+export type Region = "Golfo de Cádiz" | "Costa da Morte";
 
 export interface Station {
   /** ID de puerto del Instituto Hidrográfico de la Marina (param `id` del API getmarea). */
   id: number;
   name: string;
-  province: Province;
+  region: Region;
+  province: string;
   lat: number;
   lon: number;
 }
