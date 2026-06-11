@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DayForecast } from "@/lib/types";
 import { madridTime, HOUR } from "@/lib/time";
 
@@ -35,6 +35,14 @@ function smoothPath(pts: Pt[]): string {
 }
 
 export default function TideChart({ day }: { day: DayForecast }) {
+  // Tick propio para que el marcador "AHORA" se mueva mientras la pestaña
+  // sigue abierta (el chart no se re-renderiza por ningún otro temporizador).
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const model = useMemo(() => {
     if (day.hours.length === 0) return null;
     const start = day.hours[0].time;
@@ -59,7 +67,6 @@ export default function TideChart({ day }: { day: DayForecast }) {
     const line = smoothPath(pts);
     const area = `${line} L ${x(end).toFixed(1)},${H - PAD_B} L ${x(start).toFixed(1)},${H - PAD_B} Z`;
 
-    const now = Date.now();
     const nowInDay = now >= start && now < end;
     // Altura "ahora": muestra más cercana.
     let nowPt: Pt | null = null;
@@ -71,7 +78,7 @@ export default function TideChart({ day }: { day: DayForecast }) {
     }
 
     return { start, end, x, y, line, area, nowPt };
-  }, [day]);
+  }, [day, now]);
 
   if (!model) return null;
   const { start, end, x, y, line, area, nowPt } = model;

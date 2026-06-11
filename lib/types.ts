@@ -38,12 +38,6 @@ export interface HourScore {
   score: number; // 0..100
   tideHeight: number; // m interpolado
   tideRate: number; // m/h (signo: + sube, - baja)
-  factors: {
-    tide: number; // 0..1
-    solunar: number; // 0..1
-    light: number; // 0..1
-    weather: number; // 0..1
-  };
   flags: {
     major: boolean; // periodo solunar mayor
     minor: boolean; // periodo solunar menor

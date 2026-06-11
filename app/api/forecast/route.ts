@@ -33,24 +33,31 @@ export async function GET(req: NextRequest) {
   const to = now + days * 24 * HOUR;
   const warnings: string[] = [];
 
-  let extremes;
-  try {
-    extremes = await fetchExtremes(station.id, from, to);
-  } catch (e: any) {
+  // Mareas y meteo son I/O independientes: en paralelo. Las mareas son
+  // imprescindibles (502 si fallan); la meteo es opcional (warning).
+  const [extremesResult, marineResult] = await Promise.allSettled([
+    fetchExtremes(station.id, from, to),
+    fetchMarine(station.lat, station.lon, days),
+  ]);
+
+  if (extremesResult.status === "rejected") {
+    const msg =
+      extremesResult.reason instanceof Error
+        ? extremesResult.reason.message
+        : String(extremesResult.reason);
     return NextResponse.json(
-      { error: `No se pudieron obtener las mareas del IHM: ${e.message}` },
+      { error: `No se pudieron obtener las mareas del IHM: ${msg}` },
       { status: 502 }
     );
   }
+  const extremes = extremesResult.value;
   if (extremes.length === 0)
     warnings.push("El IHM no devolvió extremos de marea para esta estación.");
 
   let marine: Awaited<ReturnType<typeof fetchMarine>> = [];
-  try {
-    marine = await fetchMarine(station.lat, station.lon, days);
-  } catch {
+  if (marineResult.status === "fulfilled") marine = marineResult.value;
+  else
     warnings.push("No se pudo obtener la meteo-marina (Open-Meteo); se omite ese factor.");
-  }
 
   const daysOut = buildForecast(extremes, marine, station.lat, station.lon, now, days);
 

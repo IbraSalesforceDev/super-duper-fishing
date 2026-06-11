@@ -14,6 +14,7 @@ import {
   type SolunarPeriod,
 } from "./astro";
 import { HOUR, madridDateKey, madridStartOfDay } from "./time";
+import { RATING_THRESHOLDS } from "./rating";
 
 // Modelo de puntuación para pesca deportiva desde playa (surfcasting).
 //
@@ -104,9 +105,9 @@ function scoreWeather(m: HourlyMarine | null): number {
 }
 
 function ratingFromScore(s: number): DayForecast["rating"] {
-  if (s >= 70) return "excelente";
-  if (s >= 55) return "buena";
-  if (s >= 40) return "regular";
+  if (s >= RATING_THRESHOLDS.excelente) return "excelente";
+  if (s >= RATING_THRESHOLDS.buena) return "buena";
+  if (s >= RATING_THRESHOLDS.regular) return "regular";
   return "floja";
 }
 
@@ -213,7 +214,6 @@ export function buildForecast(
         score,
         tideHeight: Number(height.toFixed(2)),
         tideRate: Number(rate.toFixed(2)),
-        factors: { tide: fTide, solunar: fSol, light: light.score, weather: fWeather },
         flags: {
           major: isMajor,
           minor: isMinor,

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import ForecastView from "@/components/ForecastView";
 import { STATIONS, REGION_ORDER, nearestStation } from "@/lib/stations";
+import { madridDateKey, madridTime } from "@/lib/time";
 import type { ForecastResponse, Station } from "@/lib/types";
 
 // Leaflet usa `window`, así que cargamos el mapa solo en cliente.
@@ -23,6 +24,17 @@ export default function Home() {
   const [data, setData] = useState<ForecastResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Día local actual (Europe/Madrid). Al cruzar la medianoche fuerza un
+  // refetch (la previsión de "hoy" cambia) y particiona la caché del CDN por
+  // día, evitando servir el payload de ayer recién pasada la medianoche.
+  const [dayKey, setDayKey] = useState(() => madridDateKey(Date.now()));
+  useEffect(() => {
+    const id = setInterval(() => {
+      const k = madridDateKey(Date.now());
+      setDayKey((prev) => (prev === k ? prev : k));
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Estación desde la URL (?st=ID) al cargar: enlaces compartibles.
   useEffect(() => {
@@ -47,7 +59,9 @@ export default function Home() {
     setError(null);
     (async () => {
       try {
-        const res = await fetch(`/api/forecast?stationId=${station.id}&days=7`);
+        const res = await fetch(
+          `/api/forecast?stationId=${station.id}&days=7&d=${dayKey}`
+        );
         const json = await res.json();
         if (!active) return;
         if (!res.ok) throw new Error(json.error ?? "Error desconocido");
@@ -64,7 +78,7 @@ export default function Home() {
     return () => {
       active = false;
     };
-  }, [station]);
+  }, [station, dayKey]);
 
   const handlePick = useCallback((lat: number, lon: number) => {
     setStation(nearestStation(lat, lon));
@@ -150,11 +164,7 @@ export default function Home() {
                 {bestDay.windows[0] && (
                   <>
                     · mejor franja alrededor de las{" "}
-                    {new Intl.DateTimeFormat("es-ES", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      timeZone: "Europe/Madrid",
-                    }).format(new Date(bestDay.windows[0].peak))}
+                    {madridTime(bestDay.windows[0].peak)}
                   </>
                 )}
               </p>

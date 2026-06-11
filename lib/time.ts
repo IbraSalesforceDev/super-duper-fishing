@@ -5,20 +5,36 @@
 
 const MADRID = "Europe/Madrid";
 
+// Formatters cacheados a nivel de módulo: construir un Intl.DateTimeFormat es
+// caro y estas funciones se llaman en bucles calientes (parseo de ~120 mareas
+// por mes en el servidor, etiquetas horarias en cada render del cliente).
+const offsetFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: MADRID,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+});
+const dateKeyFmt = new Intl.DateTimeFormat("en-CA", {
+  timeZone: MADRID,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+const timeFmt = new Intl.DateTimeFormat("es-ES", {
+  timeZone: MADRID,
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
 /** Offset en minutos de Europe/Madrid respecto a UTC para un instante dado. */
 export function madridOffsetMinutes(at: Date): number {
-  // Formateamos el mismo instante en UTC y en Madrid y comparamos.
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: MADRID,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-  const parts = dtf.formatToParts(at);
+  // Formateamos el mismo instante en Madrid y comparamos con UTC.
+  const parts = offsetFmt.formatToParts(at);
   const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
   const asUTC = Date.UTC(
     get("year"),
@@ -44,31 +60,24 @@ export function madridToEpoch(
 ): number {
   // Primera aproximación tratando la hora local como si fuera UTC.
   const guess = Date.UTC(year, month - 1, day, hour, minute);
-  // Corregimos con el offset real de Madrid en ese instante.
-  const off = madridOffsetMinutes(new Date(guess));
-  return guess - off * 60000;
+  // Doble corrección: cerca de los cambios CET/CEST el offset vigente en
+  // `guess` puede no ser el del instante real (desfase de 1 h en horas locales
+  // próximas a la transición). Recalcular con el epoch ya corregido lo
+  // resuelve; para horas ambiguas del retraso de octubre elige una
+  // interpretación determinista.
+  const off1 = madridOffsetMinutes(new Date(guess));
+  const off2 = madridOffsetMinutes(new Date(guess - off1 * 60000));
+  return guess - off2 * 60000;
 }
 
 /** Fecha local YYYY-MM-DD (Europe/Madrid) de un epoch. */
 export function madridDateKey(epoch: number): string {
-  const dtf = new Intl.DateTimeFormat("en-CA", {
-    timeZone: MADRID,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  return dtf.format(new Date(epoch));
+  return dateKeyFmt.format(new Date(epoch));
 }
 
 /** Hora local HH:MM (Europe/Madrid) de un epoch. */
 export function madridTime(epoch: number): string {
-  const dtf = new Intl.DateTimeFormat("es-ES", {
-    timeZone: MADRID,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-  return dtf.format(new Date(epoch));
+  return timeFmt.format(new Date(epoch));
 }
 
 /** Medianoche local (Europe/Madrid) del día que contiene a `epoch`, en epoch UTC. */

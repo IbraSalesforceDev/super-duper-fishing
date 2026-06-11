@@ -5,6 +5,7 @@ import type { DayForecast, ForecastResponse, HourScore, Region } from "@/lib/typ
 import { madridTime, HOUR, MINUTE } from "@/lib/time";
 import { tideAt } from "@/lib/tides";
 import { speciesForDay } from "@/lib/species";
+import { RATING_THRESHOLDS, bestHour } from "@/lib/rating";
 import TideChart from "./TideChart";
 
 const RATING_STYLE: Record<DayForecast["rating"], string> = {
@@ -15,9 +16,9 @@ const RATING_STYLE: Record<DayForecast["rating"], string> = {
 };
 
 function scoreColor(s: number): string {
-  if (s >= 70) return "#34d399";
-  if (s >= 55) return "#73bdd9";
-  if (s >= 40) return "#fbbf24";
+  if (s >= RATING_THRESHOLDS.excelente) return "#34d399";
+  if (s >= RATING_THRESHOLDS.buena) return "#73bdd9";
+  if (s >= RATING_THRESHOLDS.regular) return "#fbbf24";
   return "#64748b";
 }
 
@@ -55,7 +56,14 @@ function NowPanel({ data }: { data: ForecastResponse }) {
     Math.abs(rate) < 0.05 ? "parada" : rate > 0 ? "subiendo" : "bajando";
   const dirIcon = Math.abs(rate) < 0.05 ? "⏸" : rate > 0 ? "⬆" : "⬇";
 
-  const today = data.days[0];
+  // El día que contiene `now` (tras medianoche, o con payload cacheado,
+  // days[0] puede ser ayer; no asumir que el primero es hoy).
+  const today = data.days.find(
+    (d) =>
+      d.hours.length > 0 &&
+      now >= d.hours[0].time &&
+      now < d.hours[0].time + 24 * HOUR
+  );
   const hourNow = today?.hours.find(
     (h) => now >= h.time && now < h.time + HOUR
   );
@@ -132,11 +140,18 @@ function HourBars({ hours }: { hours: HourScore[] }) {
 
 function SessionPlan({ day }: { day: DayForecast }) {
   const w = day.windows[0];
-  const best = [...day.hours].sort((a, b) => b.score - a.score)[0];
+  const best = bestHour(day.hours);
   if (!w && !best) return null;
+
+  // Las ventanas acolchadas pueden empezar antes de medianoche: marcar las
+  // horas que caen en el día anterior para no mostrar un "23:45" ambiguo.
+  const dayStart = day.hours[0]?.time ?? 0;
+  const fmtInDay = (t: number) =>
+    dayStart && t < dayStart ? `${madridTime(t)} de la víspera` : madridTime(t);
 
   // Sin ventana destacada: plan ligero en torno a la mejor hora.
   if (!w) {
+    if (!best) return null;
     return (
       <div className="rounded-xl border border-sea-700/50 bg-sea-800/30 p-3">
         <h4 className="text-xs uppercase tracking-wide text-sea-300 mb-1">
@@ -161,9 +176,9 @@ function SessionPlan({ day }: { day: DayForecast }) {
     : "";
 
   const steps = [
-    { i: "🚗", t: `Llega sobre las ${madridTime(arrival)}`, s: "monta antes de la ventana" },
+    { i: "🚗", t: `Llega sobre las ${fmtInDay(arrival)}`, s: "monta antes de la ventana" },
     { i: "🎯", t: `Mejor momento ${madridTime(w.peak)}`, s: `marea ${tideState} · nota ${w.score}/100` },
-    { i: "🎣", t: `Pesca activa ${madridTime(w.start)}–${madridTime(w.end)}`, s: "" },
+    { i: "🎣", t: `Pesca activa ${fmtInDay(w.start)}–${madridTime(w.end)}`, s: "" },
     { i: "🏁", t: `Recoge a partir de ${madridTime(w.end)}`, s: "" },
   ];
 
@@ -196,7 +211,7 @@ function SessionPlan({ day }: { day: DayForecast }) {
 function SpeciesPanel({ day, region }: { day: DayForecast; region: Region }) {
   const [sel, setSel] = useState<string | null>(null);
   const month = Number(day.date.split("-")[1]);
-  const best = [...day.hours].sort((a, b) => b.score - a.score)[0];
+  const best = bestHour(day.hours);
   const picks = speciesForDay({
     region,
     month,
