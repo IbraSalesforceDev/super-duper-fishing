@@ -1,8 +1,9 @@
+/* Los @import deben preceder a cualquier otra regla (lo exige Turbopack/CSS). */
+@import "leaflet/dist/leaflet.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import "leaflet/dist/leaflet.css";
 
 :root {
   color-scheme: dark;

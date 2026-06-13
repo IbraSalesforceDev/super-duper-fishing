@@ -10,7 +10,8 @@ export const revalidate = 3600;
 
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
-  const days = Math.min(10, Math.max(1, Number(sp.get("days") ?? 7)));
+  const daysRaw = Math.floor(Number(sp.get("days")));
+  const days = Number.isFinite(daysRaw) ? Math.min(10, Math.max(1, daysRaw)) : 7;
 
   // Estación por id, o la más cercana a un punto del mapa.
   let station = null;
