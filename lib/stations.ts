@@ -15,6 +15,7 @@ export const STATIONS: Station[] = [
   { id: 34, name: "Isla Cristina", region: "Golfo de Cádiz", province: "Huelva", lat: 37.205, lon: -7.325 },
   { id: 35, name: "Punta Umbría", region: "Golfo de Cádiz", province: "Huelva", lat: 37.18, lon: -6.9567 },
   { id: 36, name: "Mazagón (Huelva)", region: "Golfo de Cádiz", province: "Huelva", lat: 37.1317, lon: -6.8333 },
+  { id: 37, name: "Sanlúcar de Barrameda (Bonanza)", region: "Golfo de Cádiz", province: "Cádiz", lat: 36.8017, lon: -6.3383 },
   { id: 39, name: "Chipiona", region: "Golfo de Cádiz", province: "Cádiz", lat: 36.7467, lon: -6.4283 },
   { id: 40, name: "Rota", region: "Golfo de Cádiz", province: "Cádiz", lat: 36.615, lon: -6.33 },
   { id: 42, name: "Cádiz", region: "Golfo de Cádiz", province: "Cádiz", lat: 36.54, lon: -6.2867 },
